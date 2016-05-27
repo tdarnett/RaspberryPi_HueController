@@ -3,6 +3,11 @@
 #	- make the button press response more crisp
 #	- clean up code
 
+# Created by Taylor Arnett
+#
+#
+#
+
 ############# PACKAGES ###########
 from beautifulhue.api import Bridge
 import RPi.GPIO as GPIO 	# for button presses
@@ -18,7 +23,7 @@ GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 ###### GLOBAL VARIABLES ###########
 # Philips Hue Information
-bridge = Bridge(device={'ip':'192.168.0.40'},user = {'name':'PV2PWHlM6fBO-ueKGH5p6CgM2ceihAM9dyKfD3Cj'})
+bridge = Bridge(device={'ip':'192.168.0.34'},user = {'name':'PV2PWHlM6fBO-ueKGH5p6CgM2ceihAM9dyKfD3Cj'})
 # create an ADS1015 ADC (12-bit) instance.
 # Choose a gain of 1 for reading voltages from 0 to 4.09V.
 # Or pick a different gain to change the range of voltages that are read:
