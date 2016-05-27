@@ -41,6 +41,7 @@ onToggle = True
 which = 4
 lastButtonState = False
 buttonState = True
+lastAnalog = 0
 #####################################
 
 
@@ -110,12 +111,13 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
     # Convert the 0-1 range into a value in the right range.
     return int(rightMin + (valueScaled * rightSpan))
 
-def adjustHue(lastButtonState, buttonState):  
+def adjustHue(lastButtonState, buttonState, lastAnalog):  
 	turnOn(which)
+	print 'waiting for input'
 	while True:
 		#lastBrightness = getState(which)[1]
 		#lastSaturation = getState(which)[2]
-		lastHue = getState(which)[3]
+		#lastHue = getState(which)[3]
 		input_state = GPIO.input(18)
 		hue = 0
 	
@@ -132,34 +134,41 @@ def adjustHue(lastButtonState, buttonState):
 		if buttonState == False:
 			turnOff(4)
 			print "Turning off lights!"
-			time.sleep(0.2)
+			time.sleep(2)
 			return #where we will wait fo button press to turn on
 	
 		lastButtonState = input_state
 	
-		if (lastHue >= hue):
-			if (lastHue-hue > 20):
+		if (lastAnalog >= analogValue):
+			if (lastAnalog-analogValue > 20):
 				update(which,onToggle,255,255,hue)
 				print ('updating Hue')
+				print ('waiting for input...')
+				print ('')
 		else:
-			if (hue-lastHue >20):
+			if (analogValue-lastAnalog >20):
 				update(which,onToggle,255,255,hue)
 				print ('updating Hue')
+				print ('waiting for input...')
+				print ('')
 			
+		lastAnalog = analogValue
+		
 		time.sleep(0.3)
 		
-def waitForOn ():  
+def waitForOn (): 
+	print 'waiting for input...' 
 	while True:
 		button_state = GPIO.input(18)
 		if button_state == False:
 		    print('Button Pressed')
 		    turnOn(which)
-		    adjustHue(lastButtonState, buttonState)
+		    adjustHue(lastButtonState, buttonState, lastAnalog)
 		      
 
 
 #MAIN
-adjustHue(lastButtonState, buttonState)
+adjustHue(lastButtonState, buttonState, lastAnalog)
 waitForOn()
 		
 	
