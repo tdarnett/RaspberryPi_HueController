@@ -1,6 +1,5 @@
 # TOD0:
 #	- test with the group of lights in Taylor's Room (lights 6 & 7)
-#	- make the button press response more crisp
 #	- clean up code
 
 # Created by Taylor Arnett
@@ -44,11 +43,11 @@ buttonState = True
 lastAnalog = 0
 #####################################
 
-
-def update(which, onToggle, brightness, saturation, hue):
+# function that updates the hue light through REST request
+def updateHue(which, onToggle, brightness, saturation, hue):
+	# to set maximums that hue lights can read
 	if brightness > 254:
 		brightness = 254
-	
 	if saturation > 254:
 		saturation = 254
 	if hue > 30000:
@@ -61,10 +60,13 @@ def update(which, onToggle, brightness, saturation, hue):
 				}
 			
 	bridge.light.update(resource)
+	
+	# verbose
 	print 'brightness: ' + str(brightness)
 	print 'saturation: ' + str(saturation)
 	print 'hue: ' + str(hue)
 
+# Function turns off the given light
 def turnOff(light):
 	resource = {'which': light,
 				'data':{
@@ -74,6 +76,7 @@ def turnOff(light):
 			
 	bridge.light.update(resource)
 
+# Function turns on the given light
 def turnOn(light):
 	resource = {'which': light,
 				'data':{
@@ -111,13 +114,11 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
     # Convert the 0-1 range into a value in the right range.
     return int(rightMin + (valueScaled * rightSpan))
 
+# This function will adjust the hue of the light using the potentiometer
 def adjustHue(lastButtonState, buttonState, lastAnalog):  
 	turnOn(which)
 	print 'waiting for input'
 	while True:
-		#lastBrightness = getState(which)[1]
-		#lastSaturation = getState(which)[2]
-		#lastHue = getState(which)[3]
 		input_state = GPIO.input(18)
 		hue = 0
 	
@@ -130,27 +131,26 @@ def adjustHue(lastButtonState, buttonState, lastAnalog):
 				buttonState = False
 			else:
 				buttonState = True
-	
 		if buttonState == False:
 			turnOff(4)
 			print "Turning off lights!"
 			time.sleep(2)
-			return #where we will wait fo button press to turn on
+			return 			# where we will wait for button press to turn on
 	
-		lastButtonState = input_state
+		lastButtonState = input_state	
 	
-		if (lastAnalog >= analogValue):
-			if (lastAnalog-analogValue > 20):
-				update(which,onToggle,255,255,hue)
-				print ('updating Hue')
-				print ('waiting for input...')
-				print ('')
-		else:
-			if (analogValue-lastAnalog >20):
-				update(which,onToggle,255,255,hue)
-				print ('updating Hue')
-				print ('waiting for input...')
-				print ('')
+		# this following block of code will update the lights state only if
+		# the potentiometer is incremented or decremented 20mV
+		if lastAnalog-analogValue > 20:
+			updateHue(which,onToggle,255,255,hue)
+			print ('updating Hue')
+			print ('waiting for input...')
+			print ('')
+		elif (analogValue-lastAnalog >20):
+			updateHue(which,onToggle,255,255,hue)
+			print ('updating Hue')
+			print ('waiting for input...')
+			print ('')
 			
 		lastAnalog = analogValue
 		
@@ -168,6 +168,7 @@ def waitForOn ():
 
 
 #MAIN
+waitForOn()
 adjustHue(lastButtonState, buttonState, lastAnalog)
 waitForOn()
 		
