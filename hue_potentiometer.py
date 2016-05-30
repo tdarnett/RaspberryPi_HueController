@@ -1,23 +1,16 @@
-# TOD0:
-#	- test with the group of lights in Taylor's Room (lights 6 & 7)
-#	- clean up code
-
 # Created by Taylor Arnett
-#
-#
-#
+# GitHub: tdarnett
 
 ############# PACKAGES ###########
 from beautifulhue.api import Bridge
 import RPi.GPIO as GPIO 	# for button presses
 import time
-from random import randint
 import Adafruit_ADS1x15 	# Import the ADS1x15 module.
 ##################################
 
 # Setting Up Button GPIO
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Using GPIO 18 for button input
 
 
 ###### GLOBAL VARIABLES ###########
@@ -37,14 +30,14 @@ adc = Adafruit_ADS1x15.ADS1015()
 GAIN = 1
 
 onToggle = True
-which = 4
+lightsToUpdate = [4] # Taylor's room lights are 5 and 6
 lastButtonState = False
 buttonState = True
 lastAnalog = 0
 #####################################
 
 # function that updates the hue light through REST request
-def updateHue(which, onToggle, brightness, saturation, hue):
+def updateHue(lights, brightness, saturation, hue):
 	# to set maximums that hue lights can read
 	if brightness > 254:
 		brightness = 254
@@ -53,13 +46,14 @@ def updateHue(which, onToggle, brightness, saturation, hue):
 	if hue > 30000:
 		hue = 30000
 	
-	resource = {'which': which,
-				'data':{
-					'state':{'on':onToggle, 'bri':brightness,'sat':saturation,'hue':hue}
+	for light in lights:
+		resource = {'which': light,
+					'data':{
+						'state':{'on':True, 'bri':brightness,'sat':saturation,'hue':hue}
+						}
 					}
-				}
 			
-	bridge.light.update(resource)
+		bridge.light.update(resource)
 	
 	# verbose
 	print 'brightness: ' + str(brightness)
@@ -67,24 +61,25 @@ def updateHue(which, onToggle, brightness, saturation, hue):
 	print 'hue: ' + str(hue)
 
 # Function turns off the given light
-def turnOff(light):
-	resource = {'which': light,
-				'data':{
-					'state':{'on':False}
-					}
-				}
-			
-	bridge.light.update(resource)
+def turnOff(lights):
+	for light in lights:
+		resource = {'which': light,
+					'data':{
+						'state':{'on':False}
+						}
+					}		
+		bridge.light.update(resource)
 
 # Function turns on the given light
-def turnOn(light):
-	resource = {'which': light,
-				'data':{
-					'state':{'on':True}
+def turnOn(lights):
+	for light in lights:
+		resource = {'which': light,
+					'data':{
+						'state':{'on':True}
+						}
 					}
-				}
 			
-	bridge.light.update(resource)
+		bridge.light.update(resource)
 	
 #returns the light's current state, brightness, saturation and hue
 def getState(light):
@@ -116,7 +111,13 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
 
 # This function will adjust the hue of the light using the potentiometer
 def adjustHue(lastButtonState, buttonState, lastAnalog):  
-	turnOn(which)
+	for light in lightsToUpdate:
+		initialOn, initialBri, initialSat, initialHue = getState(light)
+		#print initialBri
+		#print initialSat
+		#print initialHue
+		updateHue([light],initialBri, initialSat, initialHue)
+	#turnOn(lightsToUpdate)
 	print 'waiting for input'
 	while True:
 		input_state = GPIO.input(18)
@@ -132,7 +133,7 @@ def adjustHue(lastButtonState, buttonState, lastAnalog):
 			else:
 				buttonState = True
 		if buttonState == False:
-			turnOff(4)
+			turnOff(lightsToUpdate)
 			print "Turning off lights!"
 			time.sleep(2)
 			return 			# where we will wait for button press to turn on
@@ -142,12 +143,13 @@ def adjustHue(lastButtonState, buttonState, lastAnalog):
 		# this following block of code will update the lights state only if
 		# the potentiometer is incremented or decremented 20mV
 		if lastAnalog-analogValue > 20:
-			updateHue(which,onToggle,255,255,hue)
+			# TODO: MAKE IT SO IT KEEPS THE ORIGIAL SAT AND BRIGHTNESS
+			updateHue(lightsToUpdate,getState(lightsToUpdate[0])[1],getState(lightsToUpdate[0])[2],hue)
 			print ('updating Hue')
 			print ('waiting for input...')
 			print ('')
 		elif (analogValue-lastAnalog >20):
-			updateHue(which,onToggle,255,255,hue)
+			updateHue(lightsToUpdate,getState(lightsToUpdate[0])[1],getState(lightsToUpdate[0])[2],hue)
 			print ('updating Hue')
 			print ('waiting for input...')
 			print ('')
@@ -162,7 +164,7 @@ def waitForOn ():
 		button_state = GPIO.input(18)
 		if button_state == False:
 		    print('Button Pressed')
-		    turnOn(which)
+		    turnOn(lightsToUpdate)
 		    adjustHue(lastButtonState, buttonState, lastAnalog)
 		      
 
