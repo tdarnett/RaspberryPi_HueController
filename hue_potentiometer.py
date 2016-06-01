@@ -1,5 +1,8 @@
+
 # Created by Taylor Arnett
 # GitHub: tdarnett
+
+# TOD0: make it so the brightness doesnt change when the hue potentiometer doesnt move
 
 ############# PACKAGES ###########
 from beautifulhue.api import Bridge
@@ -33,14 +36,15 @@ onToggle = True
 lightsToUpdate = [4] # Taylor's room lights are 5 and 6
 lastButtonState = False
 buttonState = True
-lastAnalog = 0
+lastHueAnalog = 0
+lastBriAnalog = 0
 #####################################
 
 # function that updates the hue light through REST request
 def updateHue(lights, brightness, saturation, hue):
 	# to set maximums that hue lights can read
-	if brightness > 254:
-		brightness = 254
+	#if brightness > 254:
+		#brightness = 254
 	if saturation > 254:
 		saturation = 254
 	if hue > 30000:
@@ -109,23 +113,22 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
     # Convert the 0-1 range into a value in the right range.
     return int(rightMin + (valueScaled * rightSpan))
 
-# This function will adjust the hue of the light using the potentiometer
-def adjustHue(lastButtonState, buttonState, lastAnalog):  
+def adjustLights(lastButtonState, buttonState, lastBriAnalog, lastHueAnalog):
 	for light in lightsToUpdate:
 		initialOn, initialBri, initialSat, initialHue = getState(light)
-		#print initialBri
-		#print initialSat
-		#print initialHue
 		updateHue([light],initialBri, initialSat, initialHue)
-	#turnOn(lightsToUpdate)
 	print 'waiting for input'
 	while True:
 		input_state = GPIO.input(18)
 		hue = 0
-	
+		bri = 0
+		
 		# Read the specified ADC channel using the previously set gain value.
-		analogValue = adc.read_adc(0, gain=GAIN)
-		hue = translate(analogValue, 0, 1648,0,30000)
+		analogHueValue = adc.read_adc(0, gain=GAIN)
+		analogBriValue = adc.read_adc(3, gain=GAIN)
+		
+		hue = translate(analogHueValue, 0, 1648,0,30000)
+		bri = translate(analogBriValue, 0, 1648,0,254)
 	
 		if (input_state == True & lastButtonState == False):
 			if (buttonState == True):
@@ -142,36 +145,54 @@ def adjustHue(lastButtonState, buttonState, lastAnalog):
 	
 		# this following block of code will update the lights state only if
 		# the potentiometer is incremented or decremented 20mV
-		if lastAnalog-analogValue > 20:
+		if lastHueAnalog-analogHueValue > 20:
 			# TODO: MAKE IT SO IT KEEPS THE ORIGIAL SAT AND BRIGHTNESS
+			print 'BRIGHTNESS IS ', str(getState(lightsToUpdate[0])[1])
 			updateHue(lightsToUpdate,getState(lightsToUpdate[0])[1],getState(lightsToUpdate[0])[2],hue)
 			print ('updating Hue')
 			print ('waiting for input...')
 			print ('')
-		elif (analogValue-lastAnalog >20):
+		elif (analogHueValue-lastHueAnalog >20):
 			updateHue(lightsToUpdate,getState(lightsToUpdate[0])[1],getState(lightsToUpdate[0])[2],hue)
 			print ('updating Hue')
 			print ('waiting for input...')
-			print ('')
-			
-		lastAnalog = analogValue
-		
+			print ('')	
+		lastHueAnalog = analogHueValue
 		time.sleep(0.3)
 		
+		# this following block of code will update the lights brightness only if
+		# the potentiometer is incremented or decremented 20mV
+		if lastBriAnalog-analogBriValue > 20:
+			# TODO: MAKE IT SO IT KEEPS THE ORIGIAL SAT AND BRIGHTNESS
+			updateHue(lightsToUpdate,bri,getState(lightsToUpdate[0])[2],getState(lightsToUpdate[0])[3])
+			print ('updating Brightness')
+			print ('waiting for input...')
+			print ('')
+		elif (analogBriValue-lastBriAnalog >20):
+			updateHue(lightsToUpdate,bri,getState(lightsToUpdate[0])[2],getState(lightsToUpdate[0])[3])
+			print ('updating Brightness')
+			print ('waiting for input...')
+			print ('')	
+		lastBriAnalog = analogBriValue
+		
+		time.sleep(0.3)
+	
 def waitForOn (): 
+	if (getState(lightsToUpdate[0])[0]):
+		adjustLights(lastButtonState, buttonState, lastBriAnalog, lastHueAnalog)
 	print 'waiting for input...' 
 	while True:
 		button_state = GPIO.input(18)
 		if button_state == False:
 		    print('Button Pressed')
 		    turnOn(lightsToUpdate)
-		    adjustHue(lastButtonState, buttonState, lastAnalog)
+		    adjustLights(lastButtonState, buttonState, lastBriAnalog, lastHueAnalog)
 		      
 
 
 #MAIN
 waitForOn()
-adjustHue(lastButtonState, buttonState, lastAnalog)
+adjustLights(lastButtonState, buttonState, lastBriAnalog, lastHueAnalog)
 waitForOn()
 		
 	
